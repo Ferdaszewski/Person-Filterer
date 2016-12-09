@@ -1,0 +1,36 @@
+[{
+    "firstName": "Sam",
+    "lastName": "Olsen",
+    "streetAddress": "524 E Burnside",
+    "city": "Portland",
+    "state": "OR",
+    "zip": "97214"
+}, {
+    "firstName": "Samuel",
+    "lastName": "Jackson",
+    "streetAddress": "100 Pennsylvania Ave",
+    "city": "Hollywood",
+    "state": "CA",
+    "zip": "90002"
+}, {
+    "firstName": "Elizabeth",
+    "lastName": "Olsen",
+    "streetAddress": "200 Hollywood Blvd",
+    "city": "Los Angeles",
+    "state": "CA",
+    "zip": "90001"
+}, {
+    "firstName": "Peggy",
+    "lastName": "Olson",
+    "streetAddress": "300 Empire Blvd",
+    "city": "Brooklyn",
+    "state": "NY",
+    "zip": "11206"
+}, {
+    "firstName": "Elisabeth",
+    "lastName": "Moss",
+    "streetAddress": "400 Main Street",
+    "city": "Hollywood",
+    "state": "CA",
+    "zip": "90002"
+}]

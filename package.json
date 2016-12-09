@@ -1,0 +1,18 @@
+{
+  "name": "castle.rock",
+  "version": "1.0.0",
+  "description": "Single-page web application build as a code exercise for Castle Rock.",
+  "main": "index.js",
+  "author": "Joshua Ferdaszewski",
+  "scripts": {
+    "prestart": "npm install",
+    "start": "http-server"
+  },
+  "devDependencies": {
+    "http-server": "^0.9.0"
+  },
+  "dependencies": {
+    "jquery": "^3.1.1",
+    "skeleton-css": "^2.0.4"
+  }
+}

@@ -1,0 +1,17 @@
+[{
+    "description": "\"S\" in first name",
+    "criteria": {
+        "firstName": "s"
+    }
+}, {
+    "description": "Ols(e/o)ns",
+    "criteria": {
+        "lastName": "ols"
+    }
+}, {
+    "description": "Hollywood Stars",
+    "criteria": {
+        "city": "hollywood",
+        "state": "ca"
+    }
+}]
