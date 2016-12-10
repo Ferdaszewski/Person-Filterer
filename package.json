@@ -1,5 +1,5 @@
 {
-  "name": "castle.rock",
+  "name": "Person-Filterer",
   "version": "1.0.0",
   "description": "Single-page web application build as a code exercise for Castle Rock.",
   "main": "index.js",
