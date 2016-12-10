@@ -4,7 +4,7 @@
 // IIFE used to scope my vars!
 (function() {
 
-    // ordered array of person data (keys)
+    // ordered array of person data (keys).  Order matches column headers in the HTML
     var PERSON_KEYS = [
         "firstName",
         "lastName",
@@ -21,7 +21,7 @@
 
     /**
      * Fetches person data.
-     * Takes an optional retry argument, that if true, on failure of the GET request
+     * Takes an optional argument, that if true, on failure of the GET request
      * it will attempt to getPersons again.
      */
     function getPersons(retry) {
@@ -50,7 +50,7 @@
 
 
     /** Fetch filter data.
-     * Takes an optional retry argument, that if true, on failure of the GET request
+     * Takes an optional argument, that if true, on failure of the GET request
      * it will attempt to getFilters again.
      */
     function getFilters(retry) {
@@ -76,7 +76,7 @@
 
 
     /**
-     * Takes an array of persons and populates them into an HTML table.
+     * Takes an array of person objects and populates them into an HTML table.
      */
     function populate(persons) {
         // remove any existing data in the table
@@ -95,7 +95,8 @@
     }
 
 
-    /** Takes an array of filter objects and makes them into buttons.
+    /**
+     * Takes an array of filter objects and makes them into buttons.
      */
     function buttonify(filters) {
         // remove any existing buttons
@@ -116,10 +117,10 @@
     }
 
     /**
-     * Filters the persons list using the activeFilters list.
-     * A person passes a filter if for *all* of the filter's "criteria",
-     * the criterion value exists as a case-insensitive substring of the
-     * same key on the person object
+     * Filters the persons list using the activeFilters.
+     * A person passes a filter if *all* of the filter's "criteria" is meet.
+     * The criterion value exists as a case-insensitive substring of the
+     * same key on the person object.
      */
     function filterPersons() {
         // if there are no active filters, display everybody
@@ -140,7 +141,7 @@
                     match = match && (pValue.indexOf(cValue) !== -1);
                 }
 
-                // we can exit early once we have one match
+                // we can exit early since we have one match
                 if (match) return true;
             }
 
@@ -148,6 +149,7 @@
             return false;
         });
 
+        // display the filtered list of people
         populate(filteredPeople);
     }
 
@@ -160,6 +162,7 @@
         var button = $(event.target);
         var filterData = button.data();
 
+        // "selected" class on the element indicates the filter is active
         if (button.hasClass("selected")) {
             delete activeFilters[filterData.index];
         } else {
@@ -167,15 +170,17 @@
         }
 
         button.toggleClass("selected");
+
+        // now that the activeFilters has been changed, update the table.
         filterPersons();
     }
 
 
     /** 
-     * Utility function that takes two objects, sorts lexicographically by
+     * Utility function that takes two objects, sorts them lexicographically by
      * "lastName" then "firstName", and returns -1 if a is before b, 1 if a is after b,
-     * and 0 if they are the same.  Intended to be used as the compareFunction when
-     * sorting an array of person objects.
+     * and 0 if they are the same.
+     * Intended to be used as the compareFunction when sorting an array of person objects.
      */
     function sortByName(a, b) {
         var nameA = a.lastName.toLowerCase() + a.firstName.toLowerCase();
@@ -194,4 +199,4 @@
         getFilters(true);
     });
 
-}())
+}());
