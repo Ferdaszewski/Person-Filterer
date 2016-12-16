@@ -1,202 +1,126 @@
 "use strict";
 
+// namespace for this application
+var app = {};
 
-// IIFE used to scope my vars!
-(function() {
+app.Person = Backbone.Model.extend({
+    matchFilters: function(filters) {
+        var match = false;
+        filters.forEach(function(filter) {
 
-    // ordered array of person data (keys).  Order matches column headers in the HTML
-    var PERSON_KEYS = [
-        "firstName",
-        "lastName",
-        "streetAddress",
-        "city",
-        "state",
-        "zip"
-    ];
+            // for a person to match they must pass at least one criteria
+            match = match || filter.checkPerson(this);
+            if (match) return;
+        }, this);
 
-    // save persons data so we only have to get it once.
-    var persons = [];
-    var activeFilters = {};
-
-
-    /**
-     * Fetches person data.
-     * Takes an optional argument, that if true, on failure of the GET request
-     * it will attempt to getPersons again.
-     */
-    function getPersons(retry) {
-        retry = !!retry;
-
-        $.getJSON("data/persons.json")
-            .done(function(data) {
-                if (data && data.length > 0) {
-                    data.sort(sortByName);
-                    persons = data;
-                    populate(persons);
-                }
-            })
-
-            .fail(function(error) {
-                console.log("ERROR getting persons: ", error);
-
-                if (retry) {
-                    window.setTimeout(function() {
-                        // try again, but don't keep trying
-                        getPersons(false);
-                    }, 5000);
-                }
-            });
+        return match;
     }
+});
 
-
-    /** Fetch filter data.
-     * Takes an optional argument, that if true, on failure of the GET request
-     * it will attempt to getFilters again.
-     */
-    function getFilters(retry) {
-        retry = !!retry;
-
-        $.getJSON("data/filters.json")
-            .done(function(data) {
-                if (data && data.length > 0) {
-                    buttonify(data);
-                }
-            })
-
-            .fail(function(error) {
-                console.log("ERROR getting filters: ", error);
-                if (retry) {
-                    window.setTimeout(function() {
-                        // try again, but don't keep trying
-                        getFilters(false);
-                    }, 5000);
-                }
-            });
+app.PersonList = Backbone.Collection.extend({
+    model: app.Person,
+    url: "/data/persons.json",
+    comparator: function(person) {
+        return person.get("lastName").toLowerCase() + person.get("firstName").toLowerCase();
     }
+});
 
+app.PersonView = Backbone.View.extend({
+    tagName: 'tr',
+    template: _.template($('#person-template').html()),
+    render: function() {
+        this.$el.html(this.template(this.model.toJSON()));
+        return this;
+    }
+});
 
-    /**
-     * Takes an array of person objects and populates them into an HTML table.
-     */
-    function populate(persons) {
-        // remove any existing data in the table
-        var tableBody = $("#people-table tbody").empty();
+app.filterCriteria = Backbone.Model.extend({
+    initialize: function() {
+        this.set("active", false);
+    },
+    checkPerson: function(person) {
+        var criteria = this.get("criteria");
+        var pass = true;
 
-        // append a row for each person to the table
-        for (var i = 0; i < persons.length; i++) {
-            var person = persons[i];
-            var row = $("<tr>");
-            for (var j = 0; j < PERSON_KEYS.length; j++) {
-                row.append($("<td>").text(person[PERSON_KEYS[j]]));
-            }
-            tableBody.append(row);
+        for (var key in criteria) {
+            var pValue = person.get(key).toLowerCase();
+            var cValue = criteria[key].toLowerCase();
+
+            // for a person to pass they must match all criteria of a filter
+            pass = pass && (pValue.indexOf(cValue) !== -1);
         }
 
+        return pass;
     }
+});
 
+app.FilterList = Backbone.Collection.extend({
+    model: app.filterCriteria,
+    url: "/data/filters.json"
+});
 
-    /**
-     * Takes an array of filter objects and makes them into buttons.
-     */
-    function buttonify(filters) {
-        // remove any existing buttons
-        var buttonDiv = $("#button-div").empty();
+app.FilterView = Backbone.View.extend({
+    tagName: 'button',
+    template: _.template('<%= description %>'),
+    render: function() {
+        this.$el.html(this.template(this.model.toJSON()));
+        return this;
+    },
+    events: {
+        'click': 'toggleButton'
+    },
+    toggleButton: function(evt) {
+        evt.preventDefault();
 
-        for (var i = 0; i < filters.length; i++) {
-            var filter = filters[i];
-            var button = $("<button>").text(filter.description);
+        // toggle whether this filter is active or not
+        this.model.set('active', !this.model.get('active'))
+        this.$el.toggleClass("selected");
 
-            // used to uniquely identify filters, description could be used, but
-            // since it is not guaranteed to be unique, could cause issues.
-            filter["index"] = i;
+        // the set of active filters has changed, so let's update the person list
+        app.view.updatePersonList();
+    }
+});
 
-            button.data(filter);
-            button.click(buttonClickHandler);
-            buttonDiv.append(button);
+app.View = Backbone.View.extend({
+    el: '#app',
+    initialize: function() {
+        app.pList.on('add', this.updatePersonList, this);
+        app.pList.fetch();
+
+        app.fList.on('add', this.addOneFilter, this);
+        app.fList.fetch();
+    },
+    addOnePerson: function(person) {
+        var pView = new app.PersonView({model: person});
+        $('#people-table tbody').append(pView.render().el);
+    },
+    updatePersonList: function() {
+        var filteredList;
+        var activeFilters = app.fList.where({active: true});
+
+        // clear the persons table
+        $('#people-table tbody').empty();
+
+        if (activeFilters.length === 0) {
+            filteredList = app.pList;
         }
-    }
-
-    /**
-     * Filters the persons list using the activeFilters.
-     * A person passes a filter if *all* of the filter's "criteria" is meet.
-     * The criterion value exists as a case-insensitive substring of the
-     * same key on the person object.
-     */
-    function filterPersons() {
-        // if there are no active filters, display everybody
-        if (Object.keys(activeFilters).length === 0) {
-            return populate(persons);
-        }
-
-        var filteredPeople = persons.filter(function(person) {
-
-            // for a person to match they must match all criteria of a filter
-            for (var i in activeFilters) {
-                var match = true;
-                var criteria = activeFilters[i].criteria;
-
-                for (var key in criteria) {
-                    var pValue = person[key].toLowerCase();
-                    var cValue = criteria[key].toLowerCase();
-                    match = match && (pValue.indexOf(cValue) !== -1);
-                }
-
-                // we can exit early since we have one match
-                if (match) return true;
-            }
-
-            // no filter matched
-            return false;
-        });
-
-        // display the filtered list of people
-        populate(filteredPeople);
-    }
-
-
-    /**
-     * Utility function to handle a click on a filter button.
-     */
-    function buttonClickHandler(event) {
-        event.preventDefault();
-        var button = $(event.target);
-        var filterData = button.data();
-
-        // "selected" class on the element indicates the filter is active
-        if (button.hasClass("selected")) {
-            delete activeFilters[filterData.index];
-        } else {
-            activeFilters[filterData.index] = filterData;
+        else {
+            filteredList = app.pList.filter(function(person) {
+                return person.matchFilters(activeFilters);
+            }, this);
         }
 
-        button.toggleClass("selected");
-
-        // now that the activeFilters has been changed, update the table.
-        filterPersons();
+        filteredList.forEach(this.addOnePerson, this);
+    },
+    addOneFilter: function(filter) {
+        var fView = new app.FilterView({model: filter});
+        $('#filter-buttons').append(fView.render().el);
     }
+});
 
 
-    /** 
-     * Utility function that takes two objects, sorts them lexicographically by
-     * "lastName" then "firstName", and returns -1 if a is before b, 1 if a is after b,
-     * and 0 if they are the same.
-     * Intended to be used as the compareFunction when sorting an array of person objects.
-     */
-    function sortByName(a, b) {
-        var nameA = a.lastName.toLowerCase() + a.firstName.toLowerCase();
-        var nameB = b.lastName.toLowerCase() + b.firstName.toLowerCase();
-
-        if (nameA < nameB) return -1;
-        if (nameA > nameB) return 1;
-
-        return 0;
-    }
-
-
-    // kick this thing off once the DOM is ready
-    $(function() {
-        getPersons(true);
-        getFilters(true);
-    });
-
-}());
+$(function() {
+    app.pList = new app.PersonList();
+    app.fList = new app.FilterList();
+    app.view = new app.View();
+});
